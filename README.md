@@ -1,4 +1,4 @@
-# Travel Expense Tracker (Cloudflare Worker)
+# Tele Expense Agent (Cloudflare Worker)
 
 An automated travel & personal expense tracker that receives message updates from a **Telegram Bot**, parses expense details using **Google Gemini AI (Structured JSON)**, and automatically logs records into a **Notion Database**.
 
@@ -100,7 +100,7 @@ npm run secrets:upload
 *(Or run directly: `npx wrangler secret bulk .dev.vars`)*
 
 ### 3. (Optional) Customize Worker Deployment Name
-By default, the Worker is named `travel-expense-worker`. To change the deployment name and URL:
+By default, the Worker is named `tele-expense-agent`. To change the deployment name and URL:
 - Edit the `"name"` field in [wrangler.jsonc](file:///Users/mac/Documents/Personal/Tools/travel-expense-worker/wrangler.jsonc):
   ```jsonc
   {
@@ -125,7 +125,7 @@ Register your Cloudflare Worker URL as the webhook handler for your Telegram Bot
 
 ```bash
 # Set Webhook
-curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://travel-expense-worker.<subdomain>.workers.dev"
+curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://tele-expense-agent.<subdomain>.workers.dev"
 ```
 
 A response of `{"ok":true,"result":true,"description":"Webhook was set"}` indicates the webhook is active.
@@ -144,7 +144,7 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/deleteWebhook"
 ## 📂 Project Structure
 
 ```
-travel-expense-worker/
+tele-expense-agent/
 ├── index.js               # Main Worker entry point
 ├── wrangler.jsonc         # Cloudflare Worker manifest configuration
 ├── package.json           # Scripts and devDependencies

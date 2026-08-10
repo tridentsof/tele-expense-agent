@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "travel-expense-worker",
+	"name": "tele-expense-agent",
 	"main": "index.js",
 	"compatibility_date": "2024-09-23",
 	"observability": {
