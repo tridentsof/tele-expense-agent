@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "secrets:upload": "wrangler secret bulk .dev.vars",
+    "dev": "node scripts/sync-env.mjs && wrangler dev",
+    "setup": "node scripts/setup.mjs",
+    "deploy": "node scripts/sync-env.mjs && wrangler deploy",
+    "secrets:upload": "node scripts/sync-env.mjs && wrangler secret bulk .dev.vars",
     "tail": "wrangler tail"
   },
   "devDependencies": {

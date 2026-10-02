@@ -1,17 +1,42 @@
 # Tele Expense Agent (Cloudflare Worker)
 
-An automated travel & personal expense tracker that receives message updates from a **Telegram Bot**, parses expense details using **Google Gemini AI (Structured JSON)**, and automatically logs records into a **Notion Database**.
+An automated travel & personal expense tracker that receives message updates from a **Telegram Bot**, parses expense details using **Google Vertex AI / Gemini AI (Gemini 3.7 Flash)** with Structured JSON schema, and automatically logs records into a **Notion Database**.
+
+---
+
+## ⚡ Quick Start: 1-Run Automated Setup
+
+You can set up, verify, deploy, and register your Telegram webhook with a single command:
+
+```bash
+npm run setup
+```
+*(or `./setup.sh`)*
+
+### What the automation script handles for you:
+1. **📝 Interactive Configuration**: Prompts for AI Provider (Vertex AI / Gemini), Notion, and Telegram keys, then safely writes `.dev.vars`.
+2. **🔍 Pre-flight Health Checks**:
+   - Tests Telegram Bot connectivity (`getMe`) and fetches bot `@username`.
+   - Tests Notion Database access and verifies required properties.
+   - Tests Gemini 3.7 Flash model connectivity.
+3. **☁️ Cloudflare Authentication**: Verifies `wrangler` login status and triggers browser login if needed.
+4. **🚀 One-Click Deployment**:
+   - Uploads all secrets automatically via `wrangler secret bulk .dev.vars`.
+   - Deploys the Cloudflare Worker and extracts your public Worker URL.
+5. **🔗 Automatic Telegram Webhook**: Registers your Worker URL directly with the Telegram Webhook API.
+
+> **Non-interactive mode**: If your `.dev.vars` is already configured, run `npm run setup -- --yes` to run the entire pipeline automatically without prompts.
 
 ---
 
 ## 🏗️ Architecture & Workflow
 
-1. **User** sends an expense message (e.g., `$15 for dinner` or `150k VND for souvenirs`) to the **Telegram Bot**.
+1. **User** sends an expense message (e.g., `150k ăn trưa` or `$15 for dinner`) to the **Telegram Bot**.
 2. **Telegram Webhook** forwards the incoming update payload to the **Cloudflare Worker**.
-3. **Cloudflare Worker** calls the **Google Gemini API** (`gemini-3.6-flash` model with Structured JSON schema) to extract:
-   - `amount` (number)
-   - `currency` (string, defaults to VND if unspecified)
-   - `description` (string with category emoji prefix)
+3. **Cloudflare Worker** calls **Google Vertex AI** (or **Google AI Studio**) with **Gemini 3.7 Flash** (`gemini-3.7-flash` model with Structured JSON schema) to extract:
+   - `amount` (number, parses shorthands like `150k` -> `150000`)
+   - `currency` (string, defaults to `VND` if unspecified)
+   - `description` (string with category emoji prefix, e.g. `🍜 Ăn trưa`)
    - `date` (ISO date string)
 4. Extracted payment details are posted directly to the target **Notion Database**.
 5. The Worker replies back to the Telegram chat with a formatted confirmation message.
@@ -23,39 +48,48 @@ An automated travel & personal expense tracker that receives message updates fro
 1. **Node.js**: Version 18 or higher.
 2. **Cloudflare Account**: Configured with the `wrangler` CLI.
 3. **Telegram Bot Token**: Create a bot via [@BotFather](https://t.me/BotFather) on Telegram.
-4. **Google Gemini API Key**: Obtain an API key from [Google AI Studio](https://aistudio.google.com/).
+4. **AI Provider (Vertex AI or Gemini)**:
+   - **Google Vertex AI** (Recommended): API key (Express Mode) or Google Cloud IAM credentials with model `gemini-3.7-flash`.
+   - **Google AI Studio**: API key from [Google AI Studio](https://aistudio.google.com/).
 5. **Notion Integration & Database**:
    - Create an integration at [Notion Integrations](https://www.notion.so/my-integrations) to get your `Internal Integration Token`.
-   - Create a Notion Database and grant access (**Share** -> **Connect to**) to your integration.
+   - Create a Notion Database and grant access (**Share** -> **Add connections** -> Select your Integration name).
    - The Notion Database must contain the following schema properties:
      - `description`: **Title** property
      - `amount`: **Number** property
      - `date`: **Date** property
      - `currency`: **Rich Text** property
    - **How to find your Notion Database ID**:
-     1. Open your database in Notion (ensure full-page view).
-     2. Click **Share** (top right) and select **Copy link**, or copy the URL directly from your browser's address bar.
-     3. The URL format will look like:
+     1. Open your database in Notion (full-page view).
+     2. Click **Share** (top right) and select **Copy link**, or copy the URL from your browser's address bar.
+     3. The URL format looks like:
         `https://www.notion.so/myworkspace/a8662bed2ab14fa38932571200c77041?v=...`
-     4. Your **Database ID** is the 32-character string located after the workspace name and before the `?` query parameter (`a8662bed2ab14fa38932571200c77041` in the example above).
-
-> ⚠️ **Important**: Remember to invite your Integration to the Notion Database (**Share** -> **Add connections** -> Select your Integration name). If omitted, the API will fail with `404 Not Found`.
+     4. Your **Database ID** is the 32-character string (`a8662bed2ab14fa38932571200c77041`). The automation script also accepts the full URL and automatically strips unnecessary query parameters.
 
 ---
 
 ## ⚙️ Environment Variables
 
-| Variable Name | Type | Description | Default / Example |
+| Variable Name | Provider | Description | Default / Example |
 | :--- | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | Secret | Google Gemini API Key | `AIzaSy...` |
-| `GEMINI_MODEL` | Text | Gemini model identifier | `gemini-3.6-flash` |
-| `NOTION_TOKEN` | Secret | Notion Integration Token | `ntn_...` or `secret_...` |
-| `NOTION_DATABASE_ID` | Secret | Target Notion Database ID (32 hex chars) | `1234567890abcdef...` |
-| `TELEGRAM_BOT_TOKEN` | Secret | Telegram Bot Authentication Token | `123456789:ABCdef...` |
+| `CLOUDFLARE_WORKER_NAME` | Deployment | Name of the Cloudflare Worker | `tele-expense-agent` |
+| `LLM_PROVIDER` | Core | AI provider (`vertex` or `gemini`) | `vertex` |
+| `VERTEX_MODEL` | Vertex | Gemini model for Vertex AI | `gemini-2.5-flash` |
+| `VERTEX_SERVICE_ACCOUNT_PATH` | Vertex | Path to Google Service Account JSON file | `gcp-service-account.json` |
+| `VERTEX_PROJECT_ID` | Vertex | GCP Project ID (auto-read from JSON file) | `video-teaching-research` |
+| `VERTEX_REGION` | Vertex | GCP Region (Optional, default `us-central1`) | `us-central1` |
+| `VERTEX_API_KEY` | Vertex | Vertex AI API Key (Express Mode alternative) | `AQ...` or `AIza...` |
+| `GEMINI_API_KEY` | Gemini | Google AI Studio API Key | `AIza...` |
+| `GEMINI_MODEL` | Gemini | Gemini model for AI Studio | `gemini-2.5-flash` |
+| `NOTION_TOKEN` | Core | Notion Integration Token | `ntn_...` |
+| `NOTION_DATABASE_ID` | Core | Target Notion Database ID (32 hex chars) | `fb7a2d8edf27834b9948819ad6a536e6` |
+| `TELEGRAM_BOT_TOKEN` | Core | Telegram Bot Token from @BotFather | `8690497096:AAH...` |
 
 ---
 
-## 🚀 Local Setup & Development
+## 🚀 Manual Step-by-Step Setup
+
+If you prefer to configure and deploy manually instead of running `npm run setup`:
 
 ### 1. Install Dependencies
 ```bash
@@ -67,70 +101,43 @@ Copy `.dev.vars.example` to `.dev.vars`:
 ```bash
 cp .dev.vars.example .dev.vars
 ```
-Edit `.dev.vars` with your actual secret keys:
+Edit `.dev.vars` with your credentials:
 ```env
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+CLOUDFLARE_WORKER_NAME=tele-expense-agent
+LLM_PROVIDER=vertex
+VERTEX_MODEL=gemini-2.5-flash
+VERTEX_SERVICE_ACCOUNT_PATH=gcp-service-account.json
 
-NOTION_TOKEN=your_notion_token
+NOTION_TOKEN=ntn_your_notion_token
 NOTION_DATABASE_ID=your_notion_database_id
 
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 ```
 
-### 3. Run Development Server
+### 3. Run Development Server (Local)
 ```bash
 npm run dev
 ```
 
----
-
-## 🔒 Secret Management & Cloudflare Deployment
-
-### 1. Login to Cloudflare CLI
-```bash
-npx wrangler login
-```
-
-### 2. Bulk Upload Secrets to Cloudflare Workers
-Upload all key-value secrets from `.dev.vars` natively using Wrangler:
-```bash
-npm run secrets:upload
-```
-*(Or run directly: `npx wrangler secret bulk .dev.vars`)*
-
-### 3. (Optional) Customize Worker Deployment Name
-By default, the Worker is named `tele-expense-agent`. To change the deployment name and URL:
-- Edit the `"name"` field in [wrangler.jsonc](file:///Users/mac/Documents/Personal/Tools/travel-expense-worker/wrangler.jsonc):
-  ```jsonc
-  {
-    "name": "my-custom-worker-name",
-    ...
-  }
-  ```
-- Or pass the `--name` flag when deploying:
-  ```bash
-  npx wrangler deploy --name my-custom-worker-name
-  ```
-
 ### 4. Deploy to Cloudflare Workers
 ```bash
+# 1. Login to Cloudflare
+npx wrangler login
+
+# 2. Upload secrets to Cloudflare Worker
+npm run secrets:upload
+
+# 3. Deploy Worker
 npm run deploy
 ```
-Upon successful deployment, Wrangler will output your worker's public URL:
-`https://<your-worker-name>.<subdomain>.workers.dev`
 
 ### 5. Register Telegram Webhook
-Register your Cloudflare Worker URL as the webhook handler for your Telegram Bot using cURL:
-
+Register your Cloudflare Worker URL with the Telegram Bot API:
 ```bash
-# Set Webhook
-curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://tele-expense-agent.<subdomain>.workers.dev"
+curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://<your-worker-name>.<subdomain>.workers.dev"
 ```
 
-A response of `{"ok":true,"result":true,"description":"Webhook was set"}` indicates the webhook is active.
-
-**Other useful Webhook commands:**
+**Useful Webhook diagnostics:**
 ```bash
 # Check current Webhook status
 curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
@@ -145,19 +152,22 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/deleteWebhook"
 
 ```
 tele-expense-agent/
-├── index.js               # Main Worker entry point
+├── index.js               # Cloudflare Worker handler (Vertex AI & Gemini AI)
+├── scripts/
+│   └── setup.mjs          # Interactive & automated 1-run setup script
+├── setup.sh               # Executable shell wrapper for setup
 ├── wrangler.jsonc         # Cloudflare Worker manifest configuration
-├── package.json           # Scripts and devDependencies
+├── package.json           # Scripts and dependencies
 ├── .dev.vars.example      # Environment variables template
 ├── .dev.vars              # Local secret variables (git-ignored)
-└── README.md              # Project documentation
+└── README.md              # Documentation
 ```
 
 ---
 
 ## 📊 Live Monitoring & Logs
 
-To stream live logs from the deployed Cloudflare Worker:
+To stream live logs from your deployed Cloudflare Worker:
 ```bash
 npm run tail
 ```

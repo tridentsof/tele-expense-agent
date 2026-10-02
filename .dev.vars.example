@@ -1,8 +1,31 @@
-# Copy this file to .dev.vars for local testing (`npx wrangler dev`)
-GEMINI_API_KEY=your_google_gemini_api_key
-GEMINI_MODEL=gemini-3.6-flash
+# ==========================================
+# Tele Expense Agent Configuration (.dev.vars)
+# ==========================================
 
+# 1. Cloudflare Worker Deployment Name
+CLOUDFLARE_WORKER_NAME=tele-expense-agent
+
+# 2. AI Provider Selection: 'vertex' or 'gemini' (defaults to 'vertex')
+LLM_PROVIDER=vertex
+
+# --- OPTION A: Google Cloud Vertex AI (Default) ---
+VERTEX_MODEL=gemini-2.5-flash
+
+# Option A1: Google Cloud Service Account JSON File Path (Recommended)
+VERTEX_SERVICE_ACCOUNT_PATH=gcp-service-account.json
+
+# (Optional: If using direct key or express mode instead of file)
+# VERTEX_API_KEY=your_vertex_or_gemini_api_key
+# VERTEX_PROJECT_ID=video-teaching-research
+# VERTEX_REGION=us-central1
+
+# --- OPTION B: Google AI Studio (Gemini) ---
+# GEMINI_API_KEY=your_google_gemini_api_key
+# GEMINI_MODEL=gemini-2.5-flash
+
+# 3. Notion Integration
 NOTION_TOKEN=ntn_your_notion_integration_token
 NOTION_DATABASE_ID=your_notion_database_id
 
+# 4. Telegram Bot
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
